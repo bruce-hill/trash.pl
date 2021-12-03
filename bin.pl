@@ -43,19 +43,17 @@ sub confirm {
 if ($help) {
     say "bin.pl - Command-line trash";
     exit 0;
-}
-
-if ($empty) {
-    confirm "Empty the trash?" if $interactive;
-    say "Emptying..." if $verbose;
-    for (glob "~/.Trash/files/*") {
-        say if $verbose;
-        unlink;
-    }
+} elsif ($list) {
     for (glob "~/.Trash/info/*") {
-        unlink;
+        open(my $info, "<", $_);
+        my @lines = <$info>;
+        (my $path) = ($lines[1] =~ /^Path=(.*)/);
+        $path = uri_unescape($path);
+        (my $date) = ($lines[2] =~ /^DeletionDate=(.*)/);
+        $date = localtime->strptime($date, "%FT%H:%M:%S");
+        my $ago = Time::Ago->in_words($date);
+        say "$ago ago\t$path";
     }
-    say "Trash emptied!";
 } elsif ($untrash) {
     @files=();
     my $i = 0;
@@ -95,17 +93,17 @@ if ($empty) {
     if (my $exit_status = $? >> 8) {
         exit $exit_status;
     }
-} elsif ($list) {
-    for (glob "~/.Trash/info/*") {
-        open(my $info, "<", $_);
-        my @lines = <$info>;
-        (my $path) = ($lines[1] =~ /^Path=(.*)/);
-        $path = uri_unescape($path);
-        (my $date) = ($lines[2] =~ /^DeletionDate=(.*)/);
-        $date = localtime->strptime($date, "%FT%H:%M:%S");
-        my $ago = Time::Ago->in_words($date);
-        say "$ago ago\t$path";
+} elsif ($empty) {
+    confirm "Empty the trash?" if $interactive;
+    say "Emptying..." if $verbose;
+    for (glob "~/.Trash/files/*") {
+        say if $verbose;
+        unlink;
     }
+    for (glob "~/.Trash/info/*") {
+        unlink;
+    }
+    say "Trash emptied!";
 } else {
     say "Trashing..." if $verbose;
     for (@ARGV) {
