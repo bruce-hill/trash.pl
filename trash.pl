@@ -33,10 +33,12 @@ GetOptions(
 );
 
 sub confirm {
-    print "@_[0] [y/N] ";
-    chomp(my $reply = <STDIN>);
-    if ($reply ne "y") {
-        exit 1;
+    if (!$force) {
+        print "@_[0] [y/N] ";
+        chomp(my $reply = <STDIN>);
+        if ($reply ne "y") {
+            exit 1;
+        }
     }
 }
 
@@ -83,7 +85,11 @@ if ($help) {
     close($fzf_in);
 
     while ((my $i) = <$fzf_out> =~ /^(\d+)/) {
-        confirm "Restore $files[$i]->{path}?" if $interactive;
+        if (-e $files[$i]->{path}) {
+            confirm "File already exists at: $files[$i]->{path}\nDo you want to restore there anyways?";
+        } elsif ($interactive) {
+            confirm "Restore $files[$i]->{path}?";
+        }
         say "Restoring: $ENV{HOME}/.Trash/files/$files[$i]->{deleted} -> $files[$i]->{path}" if $verbose;
         rename "$ENV{HOME}/.Trash/files/$files[$i]->{deleted}", $files[$i]->{path};
         unlink $files[$i]->{trashinfo};
@@ -94,7 +100,7 @@ if ($help) {
         exit $exit_status;
     }
 } elsif ($empty) {
-    confirm "Empty the trash?" if $interactive;
+    confirm "Empty the trash?" unless $force;
     say "Emptying..." if $verbose;
     for (glob "~/.Trash/files/*") {
         say if $verbose;
