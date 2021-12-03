@@ -63,7 +63,7 @@ if ($help) {
         /^(\w+)=(.*)/ and $info{$1} = $2 for <$f>;
         $info{DeletionDate} = localtime->strptime($info{DeletionDate}, "%FT%H:%M:%S");
         (my $deleted) = /([^\/]+)\.trashinfo$/;
-        push(@files, \%info)
+        push @files, \%info;
     }
 
     if (!@files) {
@@ -92,7 +92,7 @@ if ($help) {
         unlink $f->{trashinfo};
     }
 
-    waitpid($pid, 0);
+    waitpid $pid, 0;
     if (my $exit_status = $? >> 8) {
         exit $exit_status;
     }
@@ -115,13 +115,13 @@ if ($help) {
             exit 1;
         }
         confirm "Send to trash: $_?" if $interactive;
-        my ($f, $filename) = tempfile("$ENV{HOME}/.Trash/info/$_-XXXXXX", SUFFIX => ".trashinfo");
+        my ($f, $filename) = tempfile "$ENV{HOME}/.Trash/info/$_-XXXXXX", SUFFIX => ".trashinfo";
         say $f "[Trash Info]";
         my $path = abs_path $_;
         say $path if $verbose;
         $path =~ s|([^/]+)|uri_escape($1)|eg;
         say $f "Path=$path";
-        my $date = strftime("%FT%H:%M:%S", localtime);
+        my $date = strftime "%FT%H:%M:%S", localtime;
         say $f "DeletionDate=$date";
         close $f;
         my $dest = $filename =~ s;/info/([^/]*)\.trashinfo$;/files/$1;r;
