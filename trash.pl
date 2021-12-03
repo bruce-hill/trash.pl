@@ -46,29 +46,24 @@ if ($help) {
     say "bin.pl - Command-line trash";
     exit 0;
 } elsif ($list) {
-    for (glob "~/.Trash/info/*") {
-        open(my $info, "<", $_);
-        my @lines = <$info>;
-        (my $path) = ($lines[1] =~ /^Path=(.*)/);
-        $path = uri_unescape($path);
-        (my $date) = ($lines[2] =~ /^DeletionDate=(.*)/);
-        $date = localtime->strptime($date, "%FT%H:%M:%S");
+    for (<~/.Trash/info/*>) {
+        open my $f, $_;
+        my %info;
+        /^(\w+)=(.*)/ and $info{$1} = $2 for <$f>;
+        $date = localtime->strptime($info{DeletionDate}, "%FT%H:%M:%S");
         my $ago = Time::Ago->in_words($date);
-        say "$ago ago\t$path";
+        say "$ago ago\t$info{Path}";
     }
 } elsif ($untrash) {
     @files=();
     my $i = 0;
-    for (glob "~/.Trash/info/*") {
-        open(my $info, "<", $_);
-        my @lines = <$info>;
-        (my $path) = ($lines[1] =~ /^Path=(.*)/);
-        $path = uri_unescape($path);
-        (my $date) = ($lines[2] =~ /^DeletionDate=(.*)/);
-        $date = localtime->strptime($date, "%FT%H:%M:%S");
-        # (my $deleted) = ($_ =~ s@/info/(.*)\.trashinfo$@/files/$1@);
+    for (<~/.Trash/info/*>) {
+        open my $f, $_;
+        my %info = (i => $i++, trashinfo => $_);
+        /^(\w+)=(.*)/ and $info{$1} = $2 for <$f>;
+        $info{DeletionDate} = localtime->strptime($info{DeletionDate}, "%FT%H:%M:%S");
         (my $deleted) = /([^\/]+)\.trashinfo$/;
-        push(@files, {i => $i++, trashinfo => $_, path => $path, date => $date, deleted => $deleted})
+        push(@files, \%info)
     }
 
     if (!@files) {
@@ -78,21 +73,23 @@ if ($help) {
 
     my $pid = open3(my $fzf_in, my $fzf_out, ">&STDERR",
         "fzf", "-d", '\\t', "--nth=2..", "--with-nth=2..", "-m", "-1", "-0", "-q", "@ARGV");
-    for (sort {$b->{date} <=> $a->{date}} @files) {
-        $ago = Time::Ago->in_words($_->{date});
-        say $fzf_in "$_->{i}\t$ago ago\t$_->{path}";
+    for (sort {$b->{DeletionDate} <=> $a->{DeletionDate}} @files) {
+        $ago = Time::Ago->in_words($_->{DeletionDate});
+        say $fzf_in "$_->{i}\t$ago ago\t$_->{Path}";
     }
-    close($fzf_in);
+    close $fzf_in;
 
-    while ((my $i) = <$fzf_out> =~ /^(\d+)/) {
-        if (-e $files[$i]->{path}) {
-            confirm "File already exists at: $files[$i]->{path}\nDo you want to restore there anyways?";
+    while (<$fzf_out> =~ /^(\d+)/) {
+        my $f = $files[$1];
+        if (-e $f->{Path}) {
+            confirm "File already exists at: $f->{Path}\nDo you want to restore there anyways?";
         } elsif ($interactive) {
-            confirm "Restore $files[$i]->{path}?";
+            confirm "Restore $f->{Path}?";
         }
-        say "Restoring: $ENV{HOME}/.Trash/files/$files[$i]->{deleted} -> $files[$i]->{path}" if $verbose;
-        rename "$ENV{HOME}/.Trash/files/$files[$i]->{deleted}", $files[$i]->{path};
-        unlink $files[$i]->{trashinfo};
+        (my $trashfile) = $f->{trashinfo} =~ /([^\/]+)\.trashinfo/;
+        say "Restoring: $ENV{HOME}/.Trash/files/$trashfile -> $f->{Path}" if $verbose;
+        rename "$ENV{HOME}/.Trash/files/$trashfile", $f->{Path};
+        unlink $f->{trashinfo};
     }
 
     waitpid($pid, 0);
@@ -102,38 +99,31 @@ if ($help) {
 } elsif ($empty) {
     confirm "Empty the trash?" unless $force;
     say "Emptying..." if $verbose;
-    for (glob "~/.Trash/files/*") {
+    for (<~/.Trash/files/*>) {
         say if $verbose;
         unlink;
     }
-    for (glob "~/.Trash/info/*") {
+    for (<~/.Trash/info/*>) {
         unlink;
     }
     say "Trash emptied!";
 } else {
     say "Trashing..." if $verbose;
     for (@ARGV) {
-        if (! -e $_) {
+        if (!-e) {
             say "File does not exist: $_";
             exit 1;
         }
-        if ($interactive) {
-            confirm "Send to trash: $_?" if $interactive;
-            # print "Delete $_? [y/N] ";
-            chomp(my $reply = <STDIN>);
-            if ($reply ne "y") {
-                exit 1;
-            }
-        }
+        confirm "Send to trash: $_?" if $interactive;
         my ($f, $filename) = tempfile("$ENV{HOME}/.Trash/info/$_-XXXXXX", SUFFIX => ".trashinfo");
         say $f "[Trash Info]";
-        my $path = abs_path($_);
+        my $path = abs_path $_;
         say $path if $verbose;
-        $path =~ s;([^/]+);uri_escape($1);eg;
+        $path =~ s|([^/]+)|uri_escape($1)|eg;
         say $f "Path=$path";
         my $date = strftime("%FT%H:%M:%S", localtime);
         say $f "DeletionDate=$date";
-        close($f);
+        close $f;
         my $dest = $filename =~ s;/info/([^/]*)\.trashinfo$;/files/$1;r;
         rename $_, $dest;
     }
