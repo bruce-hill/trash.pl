@@ -21,7 +21,9 @@ trash -e
 ## Dependencies
 
 This program requires Perl (developed with v5.34.0) with the Time::Ago module
-(`cpanm Time::Ago`) and [fzf](https://github.com/junegunn/fzf).
+(`cpanm Time::Ago`), [fzf](https://github.com/junegunn/fzf) (for picking which
+file to untrash), and [exiftool](https://exiftool.org/) for showing file info
+about trashed files.
 
 ## License
 
