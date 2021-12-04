@@ -5,6 +5,9 @@ A simple perl command line tool for Freedesktop.org-compliant trash management.
 ## Usage:
 
 ```sh
+# Install:
+sudo make install
+
 # Send a file to the trash:
 trash foo.txt
 
