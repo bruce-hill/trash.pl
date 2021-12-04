@@ -9,6 +9,7 @@ use Time::Ago;
 use IPC::Open3;
 use Time::Piece;
 use File::Temp qw/ tempfile /;
+use File::Basename;
 use Cwd qw(abs_path);
 use POSIX qw(strftime);
 
@@ -100,12 +101,10 @@ if ($help) {
 } else {
     say "Trashing..." if $verbose;
     for (@ARGV) {
-        if (!-e) {
-            say "File does not exist: $_";
-            exit 1;
-        }
+        die "File does not exist: $_" unless -e;
         confirm "Send to trash: $_?" if $interactive;
-        my ($f, $filename) = tempfile "$ENV{HOME}/.Trash/info/$_-XXXXXX", SUFFIX => ".trashinfo";
+        my $base = basename $_ =~ s/^\./_./r;
+        my ($f, $filename) = tempfile "$ENV{HOME}/.Trash/info/$base-XXXXXX", SUFFIX => ".trashinfo";
         say $f "[Trash Info]";
         my $path = abs_path $_;
         say $path if $verbose;
