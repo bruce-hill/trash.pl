@@ -48,9 +48,9 @@ sub trash_files {
 }
 
 if ($help) {
-    print q{
-        trash.pl - Command-line trash
-        Usage: trash [flags] [files...]
+    print qq{
+        $0 - Command-line trash
+        Usage: $0 [flags] [files...]
         Flags:
             -h, --help         print this message and exit
             -v, --verbose      run in verbose mode
@@ -64,7 +64,7 @@ if ($help) {
 } elsif ($list) {
     say "$_->{DeletedAgo}\t$_->{Path}" for (trash_files());
 } elsif ($untrash) {
-    my @files = trash_files() or die "No files currently in the trash";
+    my @files = trash_files() or say "No files currently in the trash" and exit 1;
     my $pid = open3(my $fzf_in, my $fzf_out, ">&STDERR",
         "fzf", "-d", '\\t', "--nth=3..", "--with-nth=3..", "-m", "-1", "-0",
         "--preview", "exiftool {2}", "--color", "preview-fg:6", "-q", "@ARGV");
@@ -94,10 +94,10 @@ if ($help) {
     unlink <~/.Trash/files/* ~/.Trash/info/*>;
     say "Trash emptied!";
 } else {
-    die 'No files provided. Run `trash --help` to see usage.' unless @ARGV;
+    say "No files provided. Run `$0 --help` to see usage." and exit 1 unless @ARGV;
     say "Trashing..." if $verbose;
     for (@ARGV) {
-        die "File does not exist: $_" unless -e;
+        say "File does not exist: $_" and exit 1 unless -e;
         confirm "Send to trash: $_?" if $interactive;
         my $path = abs_path $_;
         say $path if $verbose;
