@@ -18,6 +18,11 @@ trash -u foo.txt
 trash -e
 ```
 
+## Dependencies
+
+This program requires Perl (developed with v5.34.0) with the Time::Ago module
+(`cpanm Time::Ago`) and [fzf](https://github.com/junegunn/fzf).
+
 ## License
 
 The license is MIT with the Commons Clause. See [LICENSE](LICENSE) for full
