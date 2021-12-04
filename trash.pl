@@ -15,6 +15,7 @@ use POSIX qw(strftime);
 
 Getopt::Long::Configure("bundling");
 
+my $PROGRAM = basename $0;
 my ($verbose, $help, $untrash, $list, $empty, $interactive, $force);
 
 GetOptions(
@@ -49,8 +50,8 @@ sub trash_files {
 
 if ($help) {
     print qq{
-        $0 - Command-line trash
-        Usage: $0 [flags] [files...]
+        $PROGRAM - Command-line trash
+        Usage: $PROGRAM [flags] [files...]
         Flags:
             -h, --help         print this message and exit
             -v, --verbose      run in verbose mode
@@ -94,7 +95,7 @@ if ($help) {
     unlink <~/.Trash/files/* ~/.Trash/info/*>;
     say "Trash emptied!";
 } else {
-    say "No files provided. Run `$0 --help` to see usage." and exit 1 unless @ARGV;
+    say "No files provided. Run `$PROGRAM --help` to see usage." and exit 1 unless @ARGV;
     say "Trashing..." if $verbose;
     for (@ARGV) {
         say "File does not exist: $_" and exit 1 unless -e;
