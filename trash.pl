@@ -15,13 +15,7 @@ use POSIX qw(strftime);
 
 Getopt::Long::Configure("bundling");
 
-my $verbose;
-my $help;
-my $untrash;
-my $list;
-my $empty;
-my $interactive;
-my $force;
+my ($verbose, $help, $untrash, $list, $empty, $interactive, $force);
 
 GetOptions(
     "verbose|v" => \$verbose,
