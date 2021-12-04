@@ -1,6 +1,6 @@
 # Trash.pl
 
-A simple perl commandline tool for Freedesktop.org-compliant trash management.
+A simple perl command line tool for Freedesktop.org-compliant trash management.
 
 ## Usage:
 
