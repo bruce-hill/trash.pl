@@ -93,7 +93,7 @@ if ($help) {
     for (@ARGV) {
         die "File does not exist: $_" unless -e;
         confirm "Send to trash: $_?" if $interactive;
-        my $base = basename $_ =~ s/^\./_./r;
+        my $base = basename($_) =~ s/^\./_./r;
         my ($f, $filename) = tempfile "$ENV{HOME}/.Trash/info/$base-XXXXXX", SUFFIX => ".trashinfo";
         say $f "[Trash Info]";
         my $path = abs_path $_;
