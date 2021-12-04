@@ -64,14 +64,13 @@ if ($help) {
 
     while (<$fzf_out> =~ /^(\d+)/) {
         my $f = $files[$1];
-        (my $trashfile) = $f->{trashinfo} =~ /([^\/]+)\.trashinfo/;
         if (-e $f->{Path}) {
             confirm "File already exists at: $f->{Path}\nDo you want to restore there anyways?";
         } elsif ($interactive) {
-            confirm "Restore $trashfile -> `$f->{Path}?";
+            confirm "Restore $f->{trashfile} -> `$f->{Path}?";
         }
-        say "Restoring: $ENV{HOME}/.Trash/files/$trashfile -> $f->{Path}" if $verbose;
-        rename "$ENV{HOME}/.Trash/files/$trashfile", $f->{Path};
+        say "Restoring: $f->{trashfile} -> $f->{Path}" if $verbose;
+        rename "$f->{trashfile}", $f->{Path};
         unlink $f->{trashinfo};
     }
 
