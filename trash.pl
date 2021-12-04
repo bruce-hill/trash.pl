@@ -33,13 +33,10 @@ GetOptions(
 );
 
 sub confirm {
-    if (!$force) {
-        print "@_[0] [y/N] ";
-        chomp(my $reply = <STDIN>);
-        if ($reply ne "y") {
-            exit 1;
-        }
-    }
+    return if $force;
+    print "@_[0] [y/N] ";
+    chomp(my $reply = <STDIN>);
+    exit 1 if $reply ne "y";
 }
 
 if ($help) {
@@ -74,7 +71,7 @@ if ($help) {
     my $pid = open3(my $fzf_in, my $fzf_out, ">&STDERR",
         "fzf", "-d", '\\t', "--nth=2..", "--with-nth=2..", "-m", "-1", "-0", "-q", "@ARGV");
     for (sort {$b->{DeletionDate} <=> $a->{DeletionDate}} @files) {
-        $ago = Time::Ago->in_words($_->{DeletionDate});
+        my $ago = Time::Ago->in_words($_->{DeletionDate});
         say $fzf_in "$_->{i}\t$ago ago\t$_->{Path}";
     }
     close $fzf_in;
@@ -93,19 +90,12 @@ if ($help) {
     }
 
     waitpid $pid, 0;
-    if (my $exit_status = $? >> 8) {
-        exit $exit_status;
-    }
+    exit $?>>8 if $?;
 } elsif ($empty) {
     confirm "Empty the trash?" unless $force;
     say "Emptying..." if $verbose;
-    for (<~/.Trash/files/*>) {
-        say if $verbose;
-        unlink;
-    }
-    for (<~/.Trash/info/*>) {
-        unlink;
-    }
+    say join "\n", <~/.Trash/files/* ~/.Trash/info/*> if $verbose;
+    unlink <~/.Trash/files/* ~/.Trash/info/*>;
     say "Trash emptied!";
 } else {
     say "Trashing..." if $verbose;
