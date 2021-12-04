@@ -6,10 +6,10 @@ use feature say;
 use URI::Escape;
 use Getopt::Long;
 use Time::Ago;
-use IPC::Open3;
 use Time::Piece;
-use File::Temp qw/ tempfile /;
-use File::Basename;
+use IPC::Open3 qw(open3);
+use File::Temp qw(tempfile);
+use File::Basename qw(basename);
 use Cwd qw(abs_path);
 use POSIX qw(strftime);
 
