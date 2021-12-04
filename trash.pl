@@ -40,51 +40,41 @@ sub confirm {
     exit 1 if $reply ne "y";
 }
 
+sub trash_files {
+    my @files;
+    for (<~/.Trash/info/*>) {
+        open my $f, $_;
+        my %info = (trashinfo => $_);
+        /^(\w+)=(.*)/ and $info{$1} = $2 for <$f>;
+        $info{DeletionDate} = localtime->strptime($info{DeletionDate}, "%FT%H:%M:%S");
+        $info{DeletedAgo} = Time::Ago->in_words($info{DeletionDate});
+        push @files, \%info;
+    }
+    return sort {$b->{DeletionDate} <=> $a->{DeletionDate}} @files;
+}
+
 if ($help) {
     say "bin.pl - Command-line trash";
     exit 0;
 } elsif ($list) {
-    for (<~/.Trash/info/*>) {
-        open my $f, $_;
-        my %info;
-        /^(\w+)=(.*)/ and $info{$1} = $2 for <$f>;
-        $date = localtime->strptime($info{DeletionDate}, "%FT%H:%M:%S");
-        my $ago = Time::Ago->in_words($date);
-        say "$ago ago\t$info{Path}";
-    }
+    say "$_->{DeletedAgo}\t$_->{Path}" for (trash_files());
 } elsif ($untrash) {
-    @files=();
-    my $i = 0;
-    for (<~/.Trash/info/*>) {
-        open my $f, $_;
-        my %info = (i => $i++, trashinfo => $_);
-        /^(\w+)=(.*)/ and $info{$1} = $2 for <$f>;
-        $info{DeletionDate} = localtime->strptime($info{DeletionDate}, "%FT%H:%M:%S");
-        (my $deleted) = /([^\/]+)\.trashinfo$/;
-        push @files, \%info;
-    }
-
-    if (!@files) {
-        say "No files currently in the trash.";
-        exit 1;
-    }
-
+    my @files = trash_files() or die "No files currently in the trash";
     my $pid = open3(my $fzf_in, my $fzf_out, ">&STDERR",
         "fzf", "-d", '\\t', "--nth=2..", "--with-nth=2..", "-m", "-1", "-0", "-q", "@ARGV");
-    for (sort {$b->{DeletionDate} <=> $a->{DeletionDate}} @files) {
-        my $ago = Time::Ago->in_words($_->{DeletionDate});
-        say $fzf_in "$_->{i}\t$ago ago\t$_->{Path}";
+    while (my ($i, $f) = each @files) {
+        say $fzf_in "$i\t$f->{DeletedAgo} ago\t$f->{Path}";
     }
     close $fzf_in;
 
     while (<$fzf_out> =~ /^(\d+)/) {
         my $f = $files[$1];
+        (my $trashfile) = $f->{trashinfo} =~ /([^\/]+)\.trashinfo/;
         if (-e $f->{Path}) {
             confirm "File already exists at: $f->{Path}\nDo you want to restore there anyways?";
         } elsif ($interactive) {
-            confirm "Restore $f->{Path}?";
+            confirm "Restore $trashfile -> `$f->{Path}?";
         }
-        (my $trashfile) = $f->{trashinfo} =~ /([^\/]+)\.trashinfo/;
         say "Restoring: $ENV{HOME}/.Trash/files/$trashfile -> $f->{Path}" if $verbose;
         rename "$ENV{HOME}/.Trash/files/$trashfile", $f->{Path};
         unlink $f->{trashinfo};
