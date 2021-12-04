@@ -44,7 +44,7 @@ sub trash_files {
     my @files;
     for (<~/.Trash/info/*>) {
         open my $f, $_;
-        my %info = (trashinfo => $_);
+        my %info = (trashinfo => $_, trashfile => s|/info/([^/]+)\.trashinfo$|/files/$1|r);
         /^(\w+)=(.*)/ and $info{$1} = $2 for <$f>;
         $info{DeletionDate} = localtime->strptime($info{DeletionDate}, "%FT%H:%M:%S");
         $info{DeletedAgo} = Time::Ago->in_words($info{DeletionDate});
@@ -61,9 +61,10 @@ if ($help) {
 } elsif ($untrash) {
     my @files = trash_files() or die "No files currently in the trash";
     my $pid = open3(my $fzf_in, my $fzf_out, ">&STDERR",
-        "fzf", "-d", '\\t', "--nth=2..", "--with-nth=2..", "-m", "-1", "-0", "-q", "@ARGV");
+        "fzf", "-d", '\\t', "--nth=3..", "--with-nth=3..", "-m", "-1", "-0",
+        "--preview", "exiftool {2}", "--color", "preview-fg:6", "-q", "@ARGV");
     while (my ($i, $f) = each @files) {
-        say $fzf_in "$i\t$f->{DeletedAgo} ago\t$f->{Path}";
+        say $fzf_in "$i\t$f->{trashfile}\t$f->{DeletedAgo} ago\t$f->{Path}";
     }
     close $fzf_in;
 
