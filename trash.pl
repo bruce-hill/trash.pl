@@ -87,17 +87,18 @@ if ($help) {
     for (@ARGV) {
         die "File does not exist: $_" unless -e;
         confirm "Send to trash: $_?" if $interactive;
-        my $base = basename($_) =~ s/^\./_./r;
-        my ($f, $filename) = tempfile "$ENV{HOME}/.Trash/info/$base-XXXXXX", SUFFIX => ".trashinfo";
-        say $f "[Trash Info]";
         my $path = abs_path $_;
         say $path if $verbose;
         $path =~ s|([^/]+)|uri_escape($1)|eg;
-        say $f "Path=$path";
         my $date = strftime "%FT%H:%M:%S", localtime;
-        say $f "DeletionDate=$date";
+        my $base = basename($_) =~ s/^\./_./r;
+        my ($f, $filename) = tempfile "$ENV{HOME}/.Trash/info/$base-XXXXXX", SUFFIX => ".trashinfo";
+        print $f qq{
+            [Trash Info]
+            Path=$path
+            DeletionDate=$date
+        } =~ s/^\s*//mgr;
         close $f;
-        my $dest = $filename =~ s;/info/([^/]*)\.trashinfo$;/files/$1;r;
-        rename $_, $dest;
+        rename $_, ($filename =~ s|/info/([^/]*)\.trashinfo$|/files/$1|r);
     }
 }
