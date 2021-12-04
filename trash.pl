@@ -48,7 +48,18 @@ sub trash_files {
 }
 
 if ($help) {
-    say "bin.pl - Command-line trash";
+    print q{
+        trash.pl - Command-line trash
+        Usage: trash [flags] [files...]
+        Flags:
+            -h, --help         print this message and exit
+            -v, --verbose      run in verbose mode
+            -l, --list         list files currently in the trash
+            -u, --untrash      return trashed files to their original location
+            -e, --empty        empty the trash (permanently delete files)
+            -i, --interactive  prompt before making changes
+            -f, --force        bypass all prompts
+    } =~ s/^\s*//mgr;
     exit 0;
 } elsif ($list) {
     say "$_->{DeletedAgo}\t$_->{Path}" for (trash_files());
@@ -83,6 +94,7 @@ if ($help) {
     unlink <~/.Trash/files/* ~/.Trash/info/*>;
     say "Trash emptied!";
 } else {
+    die 'No files provided. Run `trash --help` to see usage.' unless @ARGV;
     say "Trashing..." if $verbose;
     for (@ARGV) {
         die "File does not exist: $_" unless -e;
