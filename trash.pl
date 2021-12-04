@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 #
-# Command line interface for Freedesktop.org-compliant trash
+# Command line tool for Freedesktop.org-compliant trash management
 #
 use feature say;
 use URI::Escape;
@@ -50,7 +50,7 @@ sub trash_files {
 
 if ($help) {
     print qq{
-        $PROGRAM - Command-line trash
+        $PROGRAM - Command line trash management tool
         Usage: $PROGRAM [flags] [files...]
         Flags:
             -h, --help         print this message and exit
