@@ -90,9 +90,9 @@ if ($help) {
     waitpid $pid, 0;
     exit $?>>8 if $?;
 } elsif ($empty) {
-    confirm "Empty the trash?" unless $force;
-    say "Emptying..." if $verbose;
+    say "Trash contents:" if $verbose;
     say join "\n", <~/.Trash/files/* ~/.Trash/info/*> if $verbose;
+    confirm "Empty the trash?" unless $force;
     unlink <~/.Trash/files/* ~/.Trash/info/*>;
     say "Trash emptied!";
 } else {
