@@ -2,7 +2,8 @@
 #
 # Command line tool for Freedesktop.org-compliant trash management
 #
-use feature say;
+use strict;
+use feature qw(say);
 use Cwd qw(abs_path);
 use File::Basename qw(basename);
 use File::Find qw(find);
@@ -106,6 +107,7 @@ if ($help) {
 } else {
     say "No files provided. Run `$PROGRAM --help` to see usage." and exit 1 unless @ARGV;
     say "Trashing..." if $verbose;
+    my $failed;
     for (@ARGV) {
         say "File does not exist: $_" and $failed = 1 and next unless -e;
         confirm "Send to trash: $_?" if $interactive;
