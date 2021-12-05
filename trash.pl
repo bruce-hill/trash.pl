@@ -3,15 +3,17 @@
 # Command line tool for Freedesktop.org-compliant trash management
 #
 use feature say;
-use URI::Escape;
+use Cwd qw(abs_path);
+use File::Basename qw(basename);
+use File::Find;
+use File::Temp qw(tempfile);
 use Getopt::Long;
+use IPC::Open3 qw(open3);
+use Number::Bytes::Human qw(format_bytes);
+use POSIX qw(strftime);
 use Time::Ago;
 use Time::Piece;
-use IPC::Open3 qw(open3);
-use File::Temp qw(tempfile);
-use File::Basename qw(basename);
-use Cwd qw(abs_path);
-use POSIX qw(strftime);
+use URI::Escape;
 
 Getopt::Long::Configure("bundling");
 
@@ -30,7 +32,7 @@ GetOptions(
 
 sub confirm {
     return if $force;
-    print "@_[0] [y/N] ";
+    print -t STDOUT ? "\x1B[1m@_[0] [y/N]\x1B[m " : "@_[0] [y/N] ";
     chomp(my $reply = <STDIN>);
     exit 1 if $reply ne "y";
 }
@@ -43,7 +45,7 @@ sub trash_files {
         /^(\w+)=(.*)/ and $info{$1} = $2 for <$f>;
         close $f;
         $info{DeletionDate} = localtime->strptime($info{DeletionDate}, "%FT%H:%M:%S");
-        $info{DeletedAgo} = Time::Ago->in_words($info{DeletionDate});
+        $info{DeletedAgo} = Time::Ago->in_words($info{DeletionDate})." ago";
         push @files, \%info;
     }
     return sort {$b->{DeletionDate} <=> $a->{DeletionDate}} @files;
@@ -64,14 +66,15 @@ if ($help) {
     } =~ s/^\s*//mgr;
     exit 0;
 } elsif ($list) {
-    say "$_->{DeletedAgo}\t$_->{Path}" for (trash_files());
+    say "\x1B[1mTrash contents:\x1B[m" if -t STDOUT;
+    say "$_->{DeletedAgo}\t$_->{Path}" for (reverse trash_files());
 } elsif ($untrash) {
     my @files = trash_files() or say "No files currently in the trash" and exit 1;
     my $pid = open3(my $fzf_in, my $fzf_out, ">&STDERR",
         "fzf", "-d", '\\t', "--nth=3..", "--with-nth=3..", "-m", "-1", "-0",
         "--preview", "exiftool {2}", "--color", "preview-fg:6", "-q", "@ARGV");
     while (my ($i, $f) = each @files) {
-        say $fzf_in "$i\t$f->{trashfile}\t$f->{DeletedAgo} ago\t$f->{Path}";
+        say $fzf_in "$i\t$f->{trashfile}\t$f->{DeletedAgo}\t$f->{Path}";
     }
     close $fzf_in;
 
@@ -90,8 +93,12 @@ if ($help) {
     waitpid $pid, 0;
     exit $?>>8 if $?;
 } elsif ($empty) {
-    say "Trash contents:" if $verbose;
-    say join "\n", <~/.Trash/files/* ~/.Trash/info/*> if $verbose;
+    my $size = 0;
+    find(sub {$size += -s if -f}, $ENV{HOME}.'/.Trash/files/');
+    my $n = 0;
+    $n += 1 for (<~/.Trash/files/*>);
+    say "\x1B[1mTrash contains $n items totaling ".format_bytes($size)."B:\x1B[m";
+    if ($verbose) { say "$_->{DeletedAgo}\t$_->{Path}" for (reverse trash_files()) };
     confirm "Empty the trash?" unless $force;
     unlink <~/.Trash/files/* ~/.Trash/info/*>;
     say "Trash emptied!";
