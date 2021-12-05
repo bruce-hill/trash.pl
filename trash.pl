@@ -41,6 +41,7 @@ sub trash_files {
         open my $f, $_;
         my %info = (trashinfo => $_, trashfile => s|/info/([^/]+)\.trashinfo$|/files/$1|r);
         /^(\w+)=(.*)/ and $info{$1} = $2 for <$f>;
+        close $f;
         $info{DeletionDate} = localtime->strptime($info{DeletionDate}, "%FT%H:%M:%S");
         $info{DeletedAgo} = Time::Ago->in_words($info{DeletionDate});
         push @files, \%info;
