@@ -5,7 +5,7 @@
 use feature say;
 use Cwd qw(abs_path);
 use File::Basename qw(basename);
-use File::Find;
+use File::Find qw(find);
 use File::Temp qw(tempfile);
 use Getopt::Long;
 use IPC::Open3 qw(open3);
@@ -13,7 +13,7 @@ use Number::Bytes::Human qw(format_bytes);
 use POSIX qw(strftime);
 use Time::Ago;
 use Time::Piece;
-use URI::Escape;
+use URI::Escape qw(uri_escape uri_unescape);
 
 Getopt::Long::Configure("bundling");
 
@@ -44,6 +44,7 @@ sub trash_files {
         my %info = (trashinfo => $_, trashfile => s|/info/([^/]+)\.trashinfo$|/files/$1|r);
         /^(\w+)=(.*)/ and $info{$1} = $2 for <$f>;
         close $f;
+        $info{Path} = uri_unescape($info{Path});
         $info{DeletionDate} = localtime->strptime($info{DeletionDate}, "%FT%H:%M:%S");
         $info{DeletedAgo} = Time::Ago->in_words($info{DeletionDate})." ago";
         push @files, \%info;
