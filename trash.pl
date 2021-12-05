@@ -109,7 +109,7 @@ if ($help) {
     say "Trashing..." if $verbose;
     my $failed;
     for (@ARGV) {
-        say "File does not exist: $_" and $failed = 1 and next unless -e;
+        say "File does not exist: $_" and ++$failed and next unless -e;
         confirm "Send to trash: $_?" if $interactive;
         say if $verbose;
         my $base = basename($_) =~ s/^\./_./r;
