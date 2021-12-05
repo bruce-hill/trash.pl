@@ -99,14 +99,13 @@ if ($help) {
     say "No files provided. Run `$PROGRAM --help` to see usage." and exit 1 unless @ARGV;
     say "Trashing..." if $verbose;
     for (@ARGV) {
-        say "File does not exist: $_" and exit 1 unless -e;
+        say "File does not exist: $_" and $failed = 1 and next unless -e;
         confirm "Send to trash: $_?" if $interactive;
-        my $path = abs_path $_;
-        say $path if $verbose;
-        $path =~ s|([^/]+)|uri_escape($1)|eg;
-        my $date = strftime "%FT%H:%M:%S", localtime;
+        say if $verbose;
         my $base = basename($_) =~ s/^\./_./r;
         my ($f, $filename) = tempfile "$ENV{HOME}/.Trash/info/$base-XXXXXX", SUFFIX => ".trashinfo";
+        my $path = abs_path($_) =~ s|([^/]+)|uri_escape($1)|egr;
+        my $date = strftime "%FT%H:%M:%S", localtime;
         print $f qq{
             [Trash Info]
             Path=$path
@@ -115,4 +114,5 @@ if ($help) {
         close $f;
         rename $_, ($filename =~ s|/info/([^/]*)\.trashinfo$|/files/$1|r);
     }
+    exit 1 if $failed;
 }
