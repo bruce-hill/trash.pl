@@ -50,7 +50,7 @@ sub get_trash_dir {
 sub get_trash_files {
     my @files;
     my $trashdir = get_trash_dir(".");
-    for (<$trashdir/*>) {
+    for (<$trashdir/info/*>) {
         open my $f, $_;
         my %info = (trashinfo => $_, trashfile => s|/info/([^/]+)\.trashinfo$|/files/$1|r);
         /^(\w+)=(.*)/ and $info{$1} = $2 for <$f>;
@@ -110,7 +110,7 @@ if ($help) {
     find(sub {$size += -s if -f}, "$trashdir/files/");
     my $n = 0;
     $n += 1 for (<$trashdir/files/*>);
-    say "\x1B[1mTrash contains $n items totaling ".format_bytes($size)."B:\x1B[m";
+    say "\x1B[1mTrash contains $n items totaling ".format_bytes($size)."B\x1B[m";
     if ($verbose) { say "$_->{DeletedAgo}\t$_->{Path}" for (reverse get_trash_files()) };
     confirm "Empty the trash?" unless $force;
     unlink <$trashdir/files/* $trashdir/info/*>;
@@ -125,6 +125,7 @@ if ($help) {
         say if $verbose;
         my $base = basename($_) =~ s/^\./_./r;
         my $trashdir = get_trash_dir($_);
+        `mkdir -p "$trashdir/files" "$trashdir/info"`;
         my ($f, $filename) = tempfile "$trashdir/info/$base-XXXXXX", SUFFIX => ".trashinfo";
         my $path = abs_path($_) =~ s|([^/]+)|uri_escape($1)|egr;
         my $date = strftime "%FT%H:%M:%S", localtime;
