@@ -38,9 +38,19 @@ sub confirm {
     exit 1 if $reply ne "y";
 }
 
-sub trash_files {
+sub get_trash_dir {
+    `df --output=target ~ @_[0]` =~ /.*\n(?<homemount>.*)\n(?<filemount>.*)\n/m;
+    if ($+{filemount} eq $+{homemount}) {
+        return "$ENV{HOME}/.Trash";
+    } else {
+        return "$+{filemount}/.Trash";
+    }
+}
+
+sub get_trash_files {
     my @files;
-    for (<~/.Trash/info/*>) {
+    my $trashdir = get_trash_dir(".");
+    for (<$trashdir/*>) {
         open my $f, $_;
         my %info = (trashinfo => $_, trashfile => s|/info/([^/]+)\.trashinfo$|/files/$1|r);
         /^(\w+)=(.*)/ and $info{$1} = $2 for <$f>;
@@ -69,9 +79,9 @@ if ($help) {
     exit 0;
 } elsif ($list) {
     say "\x1B[1mTrash contents:\x1B[m" if -t STDOUT;
-    say "$_->{DeletedAgo}\t$_->{Path}" for (reverse trash_files());
+    say "$_->{DeletedAgo}\t$_->{Path}" for (reverse get_trash_files());
 } elsif ($untrash) {
-    my @files = trash_files() or say "No files currently in the trash" and exit 1;
+    my @files = get_trash_files() or say "No files currently in the trash" and exit 1;
     my $pid = open3(my $fzf_in, my $fzf_out, ">&STDERR",
         "fzf", "-d", '\\t', "--nth=3..", "--with-nth=3..", "-m", "-1", "-0",
         "--preview", "exiftool {2}", "--color", "preview-fg:6", "-q", "@ARGV");
@@ -96,13 +106,14 @@ if ($help) {
     exit $?>>8 if $?;
 } elsif ($empty) {
     my $size = 0;
-    find(sub {$size += -s if -f}, $ENV{HOME}.'/.Trash/files/');
+    my $trashdir = get_trash_dir(".");
+    find(sub {$size += -s if -f}, "$trashdir/files/");
     my $n = 0;
-    $n += 1 for (<~/.Trash/files/*>);
+    $n += 1 for (<$trashdir/files/*>);
     say "\x1B[1mTrash contains $n items totaling ".format_bytes($size)."B:\x1B[m";
-    if ($verbose) { say "$_->{DeletedAgo}\t$_->{Path}" for (reverse trash_files()) };
+    if ($verbose) { say "$_->{DeletedAgo}\t$_->{Path}" for (reverse get_trash_files()) };
     confirm "Empty the trash?" unless $force;
-    unlink <~/.Trash/files/* ~/.Trash/info/*>;
+    unlink <$trashdir/files/* $trashdir/info/*>;
     say "Trash emptied!";
 } else {
     say "No files provided. Run `$PROGRAM --help` to see usage." and exit 1 unless @ARGV;
@@ -113,7 +124,8 @@ if ($help) {
         confirm "Send to trash: $_?" if $interactive;
         say if $verbose;
         my $base = basename($_) =~ s/^\./_./r;
-        my ($f, $filename) = tempfile "$ENV{HOME}/.Trash/info/$base-XXXXXX", SUFFIX => ".trashinfo";
+        my $trashdir = get_trash_dir($_);
+        my ($f, $filename) = tempfile "$trashdir/info/$base-XXXXXX", SUFFIX => ".trashinfo";
         my $path = abs_path($_) =~ s|([^/]+)|uri_escape($1)|egr;
         my $date = strftime "%FT%H:%M:%S", localtime;
         print $f qq{
